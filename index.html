@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Timetable Generator</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Student Timetable Generator</h1>
+        
+        <!-- Subjects Section -->
+        <h2>Subjects</h2>
+        <div id="subjectsContainer">
+            <div class="subject-input">
+                <input type="text" placeholder="Subject name" class="subject-name" required>
+                <select class="subject-priority">
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                </select>
+                <div class="time-preference">
+                    <label>Preferred time:</label>
+                    <select class="time-preference-select">
+                        <option value="any">Any time</option>
+                        <option value="morning">Morning</option>
+                        <option value="afternoon">Afternoon</option>
+                    </select>
+                </div>
+                <div class="sessions-per-week">
+                    <label>Sessions per week:</label>
+                    <input type="number" class="sessions-count" min="1" max="15" value="3" required>
+                </div>
+                <button onclick="removeSubject(this)">Remove</button>
+            </div>
+        </div>
+        <button onclick="addSubject()">Add Subject</button>
+
+        <!-- Settings Section -->
+        <h2>Settings</h2>
+        <div>
+            <label>Start time: </label>
+            <input type="time" id="startTime" value="08:00" required>
+        </div>
+        <div>
+            <label>Session duration (minutes): </label>
+            <input type="number" id="sessionDuration" min="30" max="120" value="60" step="30" required>
+        </div>
+        <div>
+            <label>Days per week: </label>
+            <select id="daysPerWeek">
+                <option value="5">5 days</option>
+                <option value="6">6 days</option>
+                <option value="7">7 days</option>
+            </select>
+        </div>
+        <div>
+            <label>Break duration (minutes): </label>
+            <input type="number" id="breakDuration" min="0" max="30" value="15" required>
+        </div>
+
+        <!-- Action Buttons -->
+        <button onclick="generate()">Generate Timetable</button>
+        <button onclick="resetForm()" class="reset-button">Reset</button>
+        <button onclick="downloadPDF()" class="download-button" id="downloadBtn" disabled>Download as PDF</button>
+
+        <!-- Timetable -->
+        <table id="timetable">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Monday</th>
+                    <th>Tuesday</th>
+                    <th>Wednesday</th>
+                    <th>Thursday</th>
+                    <th>Friday</th>
+                    <th>Saturday</th>
+                    <th>Sunday</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Timetable rows will be inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
