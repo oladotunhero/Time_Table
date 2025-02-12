@@ -152,6 +152,16 @@ function generateTimeSlots(startTime, sessionDuration, breakDuration) {
 }
 
 function distributeSubjects(subjects, timetable, timeSlots, daysPerWeek) {
+    // Helper function to shuffle array randomly
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+    }
+
+    // Create array of all possible slots
     const allSlots = [];
     for (let day = 0; day < daysPerWeek; day++) {
         for (let slot = 0; slot < timeSlots.length; slot++) {
@@ -159,23 +169,56 @@ function distributeSubjects(subjects, timetable, timeSlots, daysPerWeek) {
         }
     }
 
+    // Process subjects in priority order
     subjects.forEach(subject => {
         let sessionsPlaced = 0;
-        while (sessionsPlaced < subject.sessionsPerWeek) {
-            const availableSlots = allSlots.filter(({ day, slot }) => 
+        let attempts = 0;
+        const maxAttempts = 100; // Prevent infinite loops
+
+        while (sessionsPlaced < subject.sessionsPerWeek && attempts < maxAttempts) {
+            attempts++;
+            
+            // Get all suitable slots for this subject
+            let availableSlots = allSlots.filter(({ day, slot }) => 
                 isSlotSuitable(timetable, day, slot, subject, timeSlots));
 
             if (availableSlots.length === 0) break;
 
-            availableSlots.sort((a, b) => {
-                const countA = timetable[a.day].filter(s => s === subject.name).length;
-                const countB = timetable[b.day].filter(s => s === subject.name).length;
-                return countA - countB;
+            // Shuffle available slots to introduce randomness
+            availableSlots = shuffleArray(availableSlots);
+
+            // Score each slot based on distribution criteria
+            availableSlots.forEach(slot => {
+                let score = 0;
+                
+                // Prefer spreading across different times
+                const timeUsageCount = timetable.reduce((count, day) => 
+                    count + (day[slot.slot] === subject.name ? 1 : 0), 0);
+                score -= timeUsageCount * 2;
+
+                // Prefer spreading across different days
+                const dayUsageCount = timetable[slot.day].filter(s => s === subject.name).length;
+                score -= dayUsageCount * 3;
+
+                // Consider time preferences with some flexibility
+                const hour = parseInt(timeSlots[slot.slot].split(':')[0]);
+                if (subject.timePreference === 'morning' && hour < 12) score += 2;
+                if (subject.timePreference === 'afternoon' && hour >= 12) score += 2;
+
+                // Add some randomness to break ties
+                score += Math.random();
+
+                slot.score = score;
             });
 
-            const { day, slot } = availableSlots[0];
-            timetable[day][slot] = subject.name;
-            sessionsPlaced++;
+            // Sort by score and take the best slot
+            availableSlots.sort((a, b) => b.score - a.score);
+            
+            if (availableSlots.length > 0) {
+                const { day, slot } = availableSlots[0];
+                timetable[day][slot] = subject.name;
+                sessionsPlaced++;
+            }
         }
     });
 }
@@ -186,21 +229,23 @@ function isSlotSuitable(timetable, day, slot, subject, timeSlots) {
     const time = timeSlots[slot];
     const hour = parseInt(time.split(':')[0]);
 
-    if (subject.timePreference === 'morning' && hour >= 12) return false;
-    if (subject.timePreference === 'afternoon' && hour < 12) return false;
+    // Make time preferences more flexible
+    if (subject.timePreference === 'morning' && hour >= 14) return false;
+    if (subject.timePreference === 'afternoon' && hour < 10) return false;
 
+    // Prevent same subject in adjacent slots
     const prevSlot = slot > 0 ? timetable[day][slot - 1] : '';
     const nextSlot = slot < timeSlots.length - 1 ? timetable[day][slot + 1] : '';
     if (prevSlot === subject.name || nextSlot === subject.name) return false;
 
+    // Limit sessions per day more strictly
     const sessionsInDay = timetable[day].filter(s => s === subject.name).length;
     if (sessionsInDay >= 2) return false;
 
-    const totalSessionsPlaced = timetable.reduce((count, daySlots) => 
-        count + daySlots.filter(s => s === subject.name).length, 0);
-
-    const maxSessionsPerDay = Math.ceil(subject.sessionsPerWeek / daysPerWeek);
-    if (sessionsInDay >= maxSessionsPerDay) return false;
+    // Check if we've used this time slot too many times for this subject
+    const timeSlotUsage = timetable.reduce((count, daySlots) => 
+        count + (daySlots[slot] === subject.name ? 1 : 0), 0);
+    if (timeSlotUsage >= 2) return false;
 
     return true;
 }
